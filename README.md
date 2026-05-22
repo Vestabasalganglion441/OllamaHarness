@@ -1,8 +1,50 @@
 # Ollama Harness
 
+[![test](https://github.com/lordbasilaiassistant-sudo/OllamaHarness/actions/workflows/test.yml/badge.svg)](https://github.com/lordbasilaiassistant-sudo/OllamaHarness/actions/workflows/test.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+[![node](https://img.shields.io/badge/node-%E2%89%A520-blue.svg)](https://nodejs.org)
+
 A browser-based, Claude-Code-style agent harness wrapping a local abliterated Ollama model. Single user (you), single machine, no external deps beyond Ollama. MIT-licensed.
 
 **TL;DR**: gives a local uncensored LLM the same kind of tool loop a hosted coding agent has — file IO, shell, run_node, run_python, fetch_url, persistent memory, signed-in security audit mode — entirely on your own hardware. Streams every step (timestamps, tokens/s, per-tool latency) to a dark-mode browser UI.
+
+## Architecture
+
+```
+   ┌────────────────────┐
+   │  Browser UI (SSE)  │  public/{index.html,app.js,style.css}
+   └─────────┬──────────┘
+             │  POST /api/chat  (SSE: step / inference_done / tool_call /
+             ▼                   tool_result / loop_break / audit_mode / done)
+   ┌────────────────────────────────────────────────────────────┐
+   │                       server.js                            │
+   │  • express + origin/host guard (127.0.0.1-only)            │
+   │  • /api/chat agent loop  ──────────────┐                   │
+   └─────┬─────────────┬───────────────┬────┴────┬──────────────┘
+         │             │               │         │
+         ▼             ▼               ▼         ▼
+   src/prompts.js  src/refusal.js  src/tool-rescue.js  src/audit.js
+   (system+        (refusal regex, (fingerprint,      (.sol intent
+    audit          stripThinking)   detectLoop,        detector →
+    checklist)                      JSON-fence         routes to
+                                    rescue)            thinking model)
+         │             │               │         │
+         └─────────────┴───────┬───────┴─────────┘
+                               ▼
+                         src/ollama.js
+                         (POST /api/chat)
+                               │
+                               ▼
+                       Ollama (127.0.0.1:11435)
+                               │
+                               ▼
+                  qwen3-coder-uncensored:30b-a3b-q4  (default, MoE)
+                  huihui_ai/gpt-oss-abliterated:20b  (audit mode, thinking)
+
+   src/db.js     → data/harness.db   (conversations + messages + memories, SQLite)
+   tools.js      → workspace/        (sandboxed file IO, shell, run_node, run_python,
+                                      fetch_url, audit_patterns, remember/recall, finish)
+```
 
 ## Quickstart
 
@@ -107,13 +149,28 @@ Two layers:
 - **Long-term**: key/value memories (`memories` table). Top 25 most recent get injected into every system prompt — the agent reads them automatically. It can `remember(key, value, tags)` to add and `recall(query)` to search.
 
 ## Files
-- `server.js` — Express, agent loop, SSE, refusal/loop detection, audit-mode routing
-- `tools.js` — tool definitions, sandboxed execution, `audit_patterns` pattern library
+- `server.js` — express app, routes, agent loop (thin entry)
+- `src/db.js` — SQLite schema + saveMessage / loadMessages / windowedHistory / memory preamble
+- `src/prompts.js` — system prompt builder, reinforce prompt, Solidity audit checklist
+- `src/refusal.js` — refusal regex + detector + thinking-tag stripper
+- `src/tool-rescue.js` — fingerprint, loop detector, JSON-fence tool-call rescue
+- `src/ollama.js` — `/api/chat` + `/api/tags` clients, default sampling
+- `src/audit.js` — Solidity audit intent detector
+- `src/sse.js` — SSE writer + origin guard middleware
+- `tools.js` — tool definitions, sandboxed execution, `audit_patterns` curated pattern library, shell alternative-binary prober
 - `public/` — frontend (index.html / style.css / app.js)
-- `test/helpers.test.mjs` — unit tests for the over-escape rescue heuristic
+- `test/*.test.mjs` — unit tests for each module · `test/run.mjs` — test runner
 - `Modelfile.qwen3-coder-uncensored` — recipe to bolt the official qwen3-coder `RENDERER`/`PARSER` directives onto the huihui abliterated MoE weights so Ollama exposes `tools`
+- `.github/workflows/test.yml` — CI: lint + tests on Ubuntu & Windows × Node 20/22/24
 - `data/harness.db` — SQLite (gitignored)
 - `workspace/` — agent's file sandbox (gitignored)
+
+## Tests
+```powershell
+npm test           # run all test files in test/
+npm run lint       # syntax-check every JS file
+```
+65 unit tests covering: over-escape rescue, JSON tool-call rescue, fingerprint/loop detection, refusal detector, thinking-tag stripper, Solidity audit intent detector, audit_patterns matchers against dirty + clean fixtures for Solidity / Python.
 
 ## Safety / what this isn't
 This is the engineering layer. The model is whatever you point `MODEL=` at — by default an abliterated (refusal-stripped) Qwen3-Coder. **You are the trust boundary.** The harness sandboxes file IO to `./workspace/` and HTTP fetch to public IPs by default, but `shell` runs whatever you let it run (PowerShell or sh, with your environment); the approval modes (`auto` / `safe-auto` / `approve-all`) gate that. Read the system prompt in `server.js` and decide if you want what it says.

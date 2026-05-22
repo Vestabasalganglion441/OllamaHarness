@@ -5,7 +5,9 @@
   "description": "Browser-based Claude-Code-style harness for a local abliterated Ollama model.",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test": "node test/run.mjs",
+    "lint": "node --check server.js && node --check tools.js && node --check src/db.js && node --check src/prompts.js && node --check src/refusal.js && node --check src/tool-rescue.js && node --check src/ollama.js && node --check src/audit.js && node --check src/sse.js && node --check public/app.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",
