@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ollama Harness</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-title">⌬ Atlas</div>
+    <div class="brand-sub" id="modelLabel">loading…</div>
+  </div>
+  <button id="newChatBtn" class="primary">+ New chat</button>
+  <div class="section-label">Conversations</div>
+  <ul id="convList" class="conv-list"></ul>
+  <div class="section-label">Memory <span id="memCount" class="badge">0</span></div>
+  <ul id="memList" class="mem-list"></ul>
+  <div class="footer-row">
+    <div class="dot" id="healthDot"></div>
+    <span id="healthLabel">checking…</span>
+  </div>
+</aside>
+
+<main class="main">
+  <header class="topbar">
+    <div class="title" id="convTitle">Atlas</div>
+    <div class="topbar-right">
+      <span class="hint" id="thinking" style="display:none;">
+        <span class="spinner"></span> thinking…
+      </span>
+      <span class="hint" id="elapsed"></span>
+      <div class="mode-pill" id="modePill" role="tablist" aria-label="Approval mode">
+        <button class="mp-seg" data-mode="auto" title="Run every tool automatically.">auto</button>
+        <button class="mp-seg active" data-mode="safe-auto" title="Auto-run reads; ask before writes / shell / network.">safe</button>
+        <button class="mp-seg" data-mode="approve-all" title="Ask before every tool.">approve</button>
+      </div>
+      <label class="localnet" title="Allow fetch_url to hit private IPs (127.x, 10.x, 192.168.x, etc.). Off by default.">
+        <input type="checkbox" id="localNetToggle" />
+        <span>local net</span>
+      </label>
+      <select id="modelPicker" class="model-picker" title="Switch model"></select>
+    </div>
+  </header>
+
+  <section class="messages" id="messages">
+    <div class="empty" id="empty">
+      <div class="empty-title">Atlas is ready.</div>
+      <div class="empty-sub">Local · uncensored · tool-using · remembers things across sessions.</div>
+      <div class="quick-prompts">
+        <button class="qp" data-q="Recall everything you know about me, then suggest 3 things we could ship tonight based on what's in workspace/. Be specific.">What should we ship tonight?</button>
+        <button class="qp" data-q="Scan workspace/ recursively with shell. For each file, summarize what it is in one line. Save the summary to workspace/index.md. Then finish.">Index the workspace</button>
+        <button class="qp" data-q="Run 'systeminfo' via shell, parse the OS version, total RAM, CPU. Remember them as 'machine_specs'. Then finish with the report.">Profile this machine</button>
+        <button class="qp" data-q="Fetch https://api.github.com/repos/ollama/ollama and tell me the star count, latest release tag, and number of open issues. Remember the star count as 'ollama_stars_today'.">Check Ollama on GitHub</button>
+        <button class="qp" data-q="Write a Python script workspace/scripts/word_freq.py that takes a text file and prints the 20 most common words. Run it on workspace/payload/rant.txt if it exists, otherwise create a sample file first. Show me the output.">Build & run a word-freq script</button>
+        <button class="qp" data-q="What's the most useful thing you could do for me right now, given what you remember about me? Pick something concrete and do it.">Surprise me</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="composer">
+    <textarea id="composer" rows="3" placeholder="Give Atlas a task. It can read/write files, run shell commands, fetch URLs, and remember things forever.  ⌘/Ctrl+Enter sends."></textarea>
+    <div class="composer-actions">
+      <button id="stopBtn" class="danger" style="display:none;">■ Stop</button>
+      <button id="sendBtn" class="primary send">Send →</button>
+    </div>
+  </footer>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>

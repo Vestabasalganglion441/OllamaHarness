@@ -1,0 +1,41 @@
+# dependencies
+node_modules/
+
+# local-only state
+data/
+workspace/
+.env
+.env.local
+.env.*.local
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code / agent harness state
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.claude.json
+.claudeignore
+
+# Custom Modelfiles that point at user-specific blob paths
+Modelfile.local.*
+
+# Temp / scratch
+tmp/
+*.tmp
+*.bak
